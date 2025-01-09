@@ -1,0 +1,3 @@
+= gotools
+Contains quick tools which do not warrent a seperate library
+
