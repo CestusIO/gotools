@@ -2,86 +2,104 @@ package secrets
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"strings"
 
 	"code.cestus.io/libs/gotools/pkg/kestrel"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/go-logr/logr"
+	vault "github.com/hashicorp/vault/api"
 )
 
 type SecretManager struct {
 	log           logr.Logger
 	kestrelConfig *kestrel.Config
-	client        secretsmanager.Client
+	client        *vault.Client
 }
 
-type RestructuredSecrets []byte
+func (sm *SecretManager) ReadJSONSecretRequired(ctx context.Context, path string) (SecretObject, error) {
+	secret, err := sm.client.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("vault read failed: %w", err)
+	}
+	if secret == nil {
+		return nil, fmt.Errorf("secret at %q not found", path)
+	}
+	b, ok := secret.Data["data"].(map[string]any)
+	if !ok {
+		return nil, errors.New("not a json")
+	}
+	return b, nil
+}
 
-func ProvideSecretManager(log logr.Logger, kestrelConfig *kestrel.Config, awsConfig aws.Config) *SecretManager {
+func ProvideSecretManager(log logr.Logger, kestrelConfig *kestrel.Config, config *Config) (*SecretManager, error) {
 	log.Info("ProvideSecretsManager", "environment", kestrelConfig.EnvironmentID, "application", kestrelConfig.ApplicationID)
+	vaultConfig := vault.DefaultConfig()
+	vaultConfig.Address = config.Address
+	client, err := vault.NewClient(vaultConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Vault client: %w", err)
+	}
+	if config.K8S {
+		err = loginWithKubernetes(client, *config)
+	} else {
+		err = useTokenFromEnvOrCLI(client)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to login to vault: %w", err)
+	}
 	return &SecretManager{
 		log:           log,
 		kestrelConfig: kestrelConfig,
-		client:        *secretsmanager.NewFromConfig(awsConfig),
-	}
+		client:        client,
+	}, nil
 }
 
-func parseJSON(input any) any {
-	switch v := input.(type) {
-	case string:
-		var subData map[string]any
-		if err := json.Unmarshal([]byte(v), &subData); err == nil {
-			return parseJSON(subData)
-		}
-		return v
-	case map[string]any:
-		for key, value := range v {
-			v[key] = parseJSON(value)
-		}
-		return v
-	case []any:
-		for i, value := range v {
-			v[i] = parseJSON(value)
-		}
-		return v
-	default:
-		return v
+// For prod/EKS: Use Kubernetes Auth
+func loginWithKubernetes(client *vault.Client, config Config) error {
+	jwtPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	jwt, err := os.ReadFile(jwtPath)
+	if err != nil {
+		return fmt.Errorf("unable to read Kubernetes service account token: %w", err)
 	}
+
+	role := config.Role // should match the Vault role mapped to your service account
+	if role == "" {
+		return errors.New("vault role  must be set")
+	}
+
+	data := map[string]any{
+		"jwt":  string(jwt),
+		"role": role,
+	}
+
+	resp, err := client.Logical().Write("auth/kubernetes/login", data)
+	if err != nil {
+		return fmt.Errorf("kubernetes auth login failed: %w", err)
+	}
+
+	if resp.Auth == nil || resp.Auth.ClientToken == "" {
+		return errors.New("no auth info in Kubernetes login response")
+	}
+
+	client.SetToken(resp.Auth.ClientToken)
+	return nil
 }
 
-func ProvideRestructuredSecrets(ctx context.Context, config *Config, ssManager *SecretManager) (RestructuredSecrets, error) {
-	// Check if secrets have to be loaded and skip if not
-	if !config.Enabled {
-		return nil, nil
-	}
-	environment := ssManager.kestrelConfig.EnvironmentID
-	if config.EnvironmentOverride != "" {
-		environment = config.EnvironmentOverride
-	}
-	// get ssm secret for the service
-	svi := &secretsmanager.GetSecretValueInput{
-		SecretId: aws.String(fmt.Sprintf("service/%s%s/%s", config.Version, environment, ssManager.kestrelConfig.ApplicationID)),
-	}
-	out, err := ssManager.client.GetSecretValue(ctx, svi)
-	if err != nil {
-		return nil, err
-	}
-	// Unmarshal into a map
-	var data any
-	if err := json.Unmarshal([]byte(*out.SecretString), &data); err != nil {
-		return nil, err
+// For dev/local: Use VAULT_TOKEN or Vault CLI login
+func useTokenFromEnvOrCLI(client *vault.Client) error {
+	token := os.Getenv("VAULT_TOKEN")
+	if token == "" {
+		home, _ := os.UserHomeDir()
+		tokenPath := fmt.Sprintf("%s/.vault-token", home)
+		b, err := os.ReadFile(tokenPath)
+		if err != nil {
+			return errors.New("VAULT_TOKEN not set and ~/.vault-token not found")
+		}
+		token = strings.TrimSpace(string(b))
 	}
 
-	// Iterate and attempt to unmarshal embedded JSON strings
-	restructured := parseJSON(data)
-
-	// Marshal the result back into JSON
-	resultJSON, err := json.MarshalIndent(restructured, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	return (RestructuredSecrets)(resultJSON), nil
+	client.SetToken(token)
+	return nil
 }

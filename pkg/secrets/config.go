@@ -3,16 +3,18 @@ package secrets
 import "code.cestus.io/libs/flags/pkg/flags"
 
 type Config struct {
-	Enabled             bool
-	EnvironmentOverride string
-	Version             string
+	Enabled bool
+	Address string
+	Role    string
+	K8S     bool
 }
 
 // RegisterConfig registgers a config with a flagset
 func RegisterConfig(flagset *flags.FlagSet) *Config {
 	conf := Config{}
 	flagset.BoolVar(&conf.Enabled, 0, "secrets.enabled", "are there secrets to fetch")
-	flagset.StringVar(&conf.EnvironmentOverride, 0, "secrets.environmentoverride", "", "possible to override the kestrel environment")
-	flagset.StringVar(&conf.Version, 0, "secrets.version", "v1/", "pathprefix in secretsmanager e.g. v1/")
+	flagset.BoolVar(&conf.K8S, 0, "secrets.k8s", "running in k8s")
+	flagset.StringVar(&conf.Address, 0, "secrets.adress", "http://localhost:8200", "vault address")
+	flagset.StringVar(&conf.Role, 0, "secrets.role", "", "vault role")
 	return &conf
 }

@@ -15,10 +15,10 @@ type Secrets struct {
 // RegisterSecrets registgers a config with a flagset
 func RegisterSecrets(flagset *secrets.SecretFlagSet) *Secrets {
 	secrets := Secrets{}
-	flagset.StringVar(&secrets.Type, 0, "s2s.type", "", "key internals type")
-	flagset.StringVar(&secrets.Key, 0, "s2s.key", "", "key internals key")
-	flagset.StringVar(&secrets.KeyID, 0, "s2s.keyId", "", "key internals keyid")
-	flagset.StringVar(&secrets.ExpirationDate, 0, "s2s.expirationDate", "", "key internals expirationData")
-	flagset.StringVar(&secrets.UserID, 0, "s2s.userId", "", "key internals userid")
+	flagset.StringVar(&secrets.Type, 0, "s2sauth.type", "", "key internals type")
+	flagset.StringVar(&secrets.Key, 0, "s2sauth.key", "", "key internals key")
+	flagset.StringVar(&secrets.KeyID, 0, "s2sauth.keyId", "", "key internals keyid")
+	flagset.StringVar(&secrets.ExpirationDate, 0, "s2sauth.expirationDate", "", "key internals expirationData")
+	flagset.StringVar(&secrets.UserID, 0, "s2sauth.userId", "", "key internals userid")
 	return &secrets
 }

@@ -8,10 +8,17 @@ It assumes the use of [conventional commits](https://www.conventionalcommits.org
 ## [Unreleased]
 
 
+<a name="v0.1.0"></a>
+## [v0.1.0]
+### Features
+- change default sample secret implementation
+
+
 <a name="v0.0.1"></a>
 ## v0.0.1
 ### Features
 - tools for httpaccess
 
 
-[Unreleased]: https://github.com/CestusIO/gotools/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/CestusIO/gotools/compare/v0.1.0...HEAD
+[v0.1.0]: https://github.com/CestusIO/gotools/compare/v0.0.1...v0.1.0

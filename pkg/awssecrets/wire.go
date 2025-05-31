@@ -3,7 +3,7 @@
 
 // The build tag makes sure the stub is not built in the final build.
 
-package secrets
+package awssecrets
 
 import (
 	"github.com/google/wire"
@@ -12,4 +12,5 @@ import (
 // SecretsProviderSet provides values for Secrets
 var SecretsProviderSet = wire.NewSet(
 	ProvideSecretManager,
+	ProvideRestructuredSecrets,
 )
