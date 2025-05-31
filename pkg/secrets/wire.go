@@ -12,4 +12,5 @@ import (
 // SecretsProviderSet provides values for Secrets
 var SecretsProviderSet = wire.NewSet(
 	ProvideSecretManager,
+	ProvideRestructuredSecrets,
 )
