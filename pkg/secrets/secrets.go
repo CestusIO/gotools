@@ -2,6 +2,7 @@ package secrets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"code.cestus.io/libs/flags/pkg/flags"
@@ -32,4 +33,25 @@ func MergeSecretObjectsStrict(obj ...SecretObject) (SecretObject, error) {
 		}
 	}
 	return result, nil
+}
+
+type RestructuredSecrets []byte
+
+func ProvideRestructuredSecrets(ctx context.Context, secretConfig *Config, resolvers Resolvers) (RestructuredSecrets, error) {
+	// Check if secrets have to be loaded and skip if not
+	if !secretConfig.Enabled {
+		return nil, nil
+	}
+	document := make(SecretObject)
+
+	for _, resolver := range resolvers {
+		var err error
+		document, err = resolver.Resolve(ctx, document)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	doc, err := json.MarshalIndent(document, "", " ")
+	return doc, err
 }

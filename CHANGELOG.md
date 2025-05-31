@@ -8,6 +8,12 @@ It assumes the use of [conventional commits](https://www.conventionalcommits.org
 ## [Unreleased]
 
 
+<a name="v0.1.1"></a>
+## [v0.1.1]
+### Features
+- add ProvideRestructuredSecrets
+
+
 <a name="v0.1.0"></a>
 ## [v0.1.0]
 ### Features
@@ -20,5 +26,6 @@ It assumes the use of [conventional commits](https://www.conventionalcommits.org
 - tools for httpaccess
 
 
-[Unreleased]: https://github.com/CestusIO/gotools/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/CestusIO/gotools/compare/v0.1.1...HEAD
+[v0.1.1]: https://github.com/CestusIO/gotools/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/CestusIO/gotools/compare/v0.0.1...v0.1.0
