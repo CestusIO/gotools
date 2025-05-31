@@ -13,5 +13,6 @@ import (
 // S2SAuthProviderSet provides values for s2sAuth
 var S2SAuthProviderSet = wire.NewSet(
 	ProvideS2STokensource,
-	clientware.ProvideS2STripperware
+	clientware.ProvideS2STripperware,
+	ProvideSecretResolver,
 )
